@@ -1,0 +1,5 @@
+[35m62caa3737211b2955a6e762ab66ec740623f43d0:spendsense-ai-backend/frontend/pages/1_Dashboard.py[m[36m:[m[32m13[m[36m:[mapi_key = os.getenv("GEMINI_[1;31mAPI_KEY[m") or os.getenv("GENAI_[1;31mAPI_KEY[m")
+[35m1c99edeb83595cf90ed322e2873b28bd7e931da8:spendsense-ai-backend/frontend/pages/1_Dashboard.py[m[36m:[m[32m13[m[36m:[mapi_key = os.getenv("GEMINI_[1;31mAPI_KEY[m") or os.getenv("GENAI_[1;31mAPI_KEY[m")
+[35m367321a99a30d468282f50254df0d6847f3cf6dd:spendsense-ai-backend/.env[m[36m:[m[32m1[m[36m:[mGEMINI_[1;31mAPI_KEY[m="AIzaSyBj6KIUPCIurkZlGxxmcbSgV9ZtGDHqFRw"
+[35m367321a99a30d468282f50254df0d6847f3cf6dd:spendsense-ai-backend/.env[m[36m:[m[32m2[m[36m:[mTAVILY_[1;31mAPI_KEY[m="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"
+[35m367321a99a30d468282f50254df0d6847f3cf6dd:spendsense-ai-backend/frontend/pages/1_Dashboard.py[m[36m:[m[32m13[m[36m:[mapi_key = os.getenv("GEMINI_[1;31mAPI_KEY[m") or os.getenv("GENAI_[1;31mAPI_KEY[m")
