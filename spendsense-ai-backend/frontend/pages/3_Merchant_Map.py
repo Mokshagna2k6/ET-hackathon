@@ -1,45 +1,102 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import sqlite3
+import os
+from components.sidebar import render_global_sidebar
 
-# --- 1. PAGE SETUP ---
 st.set_page_config(page_title="Merchant Map", page_icon="🗺️", layout="wide")
 
-st.title("🗺️ Resolved Merchant Directory")
-st.markdown("A centralized view of all cryptic UPI IDs and merchants successfully resolved by AMRE.")
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__)) 
+FRONTEND_DIR = os.path.dirname(CURRENT_DIR)
+PROJECT_ROOT = os.path.dirname(FRONTEND_DIR)
+DB_PATH = os.path.join(PROJECT_ROOT, "data", "transactions.db")
+
+@st.cache_data(ttl=60)
+def load_merchant_data():
+    if not os.path.exists(DB_PATH):
+        return pd.DataFrame()
+    
+    conn = sqlite3.connect(DB_PATH)
+    query = """
+        SELECT 
+            raw_upi_id as 'Raw Cryptic ID',
+            merchant_name as 'Resolved Brand Name',
+            category as 'Category',
+            COUNT(id) as 'Total Transactions',
+            SUM(amount) as 'Total Volume (₹)',
+            AVG(confidence_score) as 'Avg AI Confidence'
+        FROM transactions
+        GROUP BY raw_upi_id, merchant_name, category
+        ORDER BY 'Total Volume (₹)' DESC
+    """
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    return df
+
+df = load_merchant_data()
+
+st.markdown("""
+    <style>
+    .et-header { color: #D32F2F; font-weight: bold; font-size: 2.5rem; }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="et-header">🗺️ Resolved Merchant Directory</div>', unsafe_allow_html=True)
+st.markdown("A centralized view of all cryptic UPI IDs and merchants successfully resolved by the Sherlock Agent.")
+
+if st.button("🔄 Sync Directory with Database"):
+    st.cache_data.clear()
+    st.rerun()
+
 st.divider()
 
-# --- 2. INTERACTIVE DATA TABLE ---
-st.subheader("🗂️ Known Entity Database")
-st.markdown("Search and filter through the merchants the AI has investigated.")
+if not df.empty:
 
-# Creating a mock dataset using Pandas (Simulating your database)
-data = {
-    "Raw Cryptic ID": ["qwikcilver@hdfc", "fashnear@yesbank", "paytmqr2810@paytm", "bharatpe.90@icici", "razorpay@sbi"],
-    "Resolved Brand Name": ["Qwikcilver (Pine Labs)", "Meesho", "Raju Tea Stall", "Local Grocery", "Razorpay Subscriptions"],
-    "Category": ["Financial Services", "E-commerce", "Food & Dining", "Groceries", "Software/SaaS"],
-    "Risk Level": ["Safe", "Safe", "Safe", "Medium", "Safe"],
-    "AI Confidence": ["98%", "95%", "88%", "75%", "99%"]
-}
-df = pd.DataFrame(data)
+    st.subheader("🗂️ Known Entity Database")
+    st.markdown(f"The AI has successfully resolved **{len(df)} unique merchants** from your transaction history.")
 
-# st.dataframe creates a beautiful, sortable UI table
-st.dataframe(df, width="stretch", hide_index=True)
+    st.dataframe(
+        df, 
+        use_container_width=True, 
+        hide_index=True,
+        column_config={
+            "Raw Cryptic ID": st.column_config.TextColumn("Raw Cryptic ID"),
+            "Resolved Brand Name": st.column_config.TextColumn("Resolved Brand Name", width="medium"),
+            "Category": st.column_config.TextColumn("Category"),
+            "Total Transactions": st.column_config.NumberColumn("Txn Count", format="%d"),
+            "Total Volume (₹)": st.column_config.NumberColumn("Total Volume (₹)", format="₹%.2f"),
+            "Avg AI Confidence": st.column_config.ProgressColumn(
+                "Avg AI Confidence",
+                help="The average confidence score from the Sherlock Agent.",
+                format="%.2f",
+                min_value=0,
+                max_value=1,
+            ),
+        }
+    )
 
-st.divider()
+    st.divider()
 
-# --- 3. GEOSPATIAL MAP ---
-st.subheader("📍 Transaction Hotspots")
-st.markdown("Geographic distribution of identified merchant terminals (Demo Data).")
+    st.subheader("📍 Transaction Hotspots")
+    st.markdown("Geographic distribution of identified merchant terminals based on total transaction volume.")
 
-# Generating mock GPS coordinates (Latitude/Longitude) for the map
-# We center these roughly over India [22.0, 79.0]
-map_data = pd.DataFrame(
-    np.random.randn(50, 2) / [20, 20] + [22.0, 79.0],
-    columns=['lat', 'lon']
-)
+    np.random.seed(42) 
+    
+    total_txns = df['Total Transactions'].sum()
+   
+    map_data = pd.DataFrame(
+        np.random.randn(int(total_txns), 2) / [8, 8] + [22.0, 79.0],
+        columns=['lat', 'lon']
+    )
 
-# st.map instantly plots these coordinates on an interactive dark-mode map!
-st.map(map_data)
+    st.map(map_data, color="#D32F2F") 
+    st.info("💡 **Demo Note:** In a production banking environment, these plotted coordinates would be pulled directly from enriched API metadata (e.g., MCC or Terminal ID).")
 
-st.info("💡 **Demo Note:** In production, GPS coordinates would be pulled from enriched API metadata or terminal IDs.")
+else:
+    st.warning("⚠️ No merchant data found. Please run the seeder or process an SMS to populate the directory.")
+
+try:
+    render_global_sidebar()
+except Exception:
+    pass
